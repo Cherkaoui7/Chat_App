@@ -28,7 +28,14 @@ export default function Register() {
             });
             navigate("/chat");
         } catch (err) {
-            setError("Registration failed. Please check your inputs.");
+            if (err.response?.data?.errors) {
+                const firstError = Object.values(err.response.data.errors)[0][0];
+                setError(firstError);
+            } else if (err.response?.data?.message) {
+                setError(err.response.data.message);
+            } else {
+                setError("Registration failed. Please check your inputs.");
+            }
         }
     };
 

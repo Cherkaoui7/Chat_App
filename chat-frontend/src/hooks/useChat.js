@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../services/api";
 import { getEcho, connectSocket } from "../services/socket";
 
@@ -7,6 +7,10 @@ export function useChat(conversationId) {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUser, setTypingUser] = useState(null);
+  const [echoChannel, setEchoChannel] = useState(null);
+  const typingTimeoutRef = useRef(null);
 
   const fetchMessages = useCallback(async (pageNumber = 1) => {
     if (!conversationId) return;
@@ -44,16 +48,45 @@ export function useChat(conversationId) {
     const echo = getEcho() || connectSocket();
     if (!echo) return;
 
-    // Listen to WebSocket
-    const channel = echo.private(`chat.${conversationId}`)
-      .listen("MessageSent", (e) => { // NOTE: .MessageSent with dot if not using full namespace in event broadcastAs
+    // Connect to Private WebSocket Channel
+    const channel = echo.private(`chat.${conversationId}`);
+    setEchoChannel(channel);
+
+    channel
+      .listen(".MessageSent", (e) => {
         setMessages((prev) => [...prev, e.message]);
+      })
+      .listenForWhisper("typing", (e) => {
+        if (e.typing) {
+          setIsTyping(true);
+          setTypingUser(e.user);
+
+          // Clear the typing indicator after 3 seconds of no new typing events
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => {
+            setIsTyping(false);
+            setTypingUser(null);
+          }, 3000);
+        } else {
+          setIsTyping(false);
+          setTypingUser(null);
+        }
       });
 
     return () => {
       echo.leave(`chat.${conversationId}`);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [conversationId, fetchMessages]);
+
+  const sendTypingEvent = (isTypingStatus, user) => {
+    if (echoChannel) {
+      echoChannel.whisper("typing", {
+        typing: isTypingStatus,
+        user: { id: user.id, name: user.name }
+      });
+    }
+  };
 
   const sendMessage = async (text) => {
     if (!text.trim() || !conversationId) return null;
@@ -79,5 +112,5 @@ export function useChat(conversationId) {
     }
   };
 
-  return { messages, loading, hasMore, sendMessage, loadMore };
+  return { messages, loading, hasMore, sendMessage, loadMore, isTyping, typingUser, sendTypingEvent };
 }

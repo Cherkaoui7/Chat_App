@@ -22,6 +22,8 @@ export const connectSocket = () => {
     forceTLS: false,
     disableStats: true,
     cluster: "mt1",
+    enableClientMessages: true,
+    enabledTransports: ['ws', 'wss'],
     authorizer: (channel, options) => {
       return {
         authorize: (socketId, callback) => {
@@ -29,6 +31,7 @@ export const connectSocket = () => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              "Accept": "application/json",
               "Authorization": `Bearer ${token}`,
             },
             body: JSON.stringify({
