@@ -100,7 +100,7 @@ export default function NewChatModal({ isOpen, onClose, onUserSelect }) {
                                         {u.avatar ? (
                                             <img src={u.avatar} alt="Avatar" className="h-full w-full rounded-full object-cover" />
                                         ) : (
-                                            <span className="text-lg font-bold">{u.name?.charAt(0).toUpperCase()}</span>
+                                            <span className="text-lg font-bold">{u.name?.charAt(0)?.toUpperCase()}</span>
                                         )}
                                     </div>
                                     <div className="flex flex-col">

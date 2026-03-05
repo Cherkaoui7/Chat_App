@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import api from "../services/api";
 import { getEcho, connectSocket } from "../services/socket";
 
-export function useChat(conversationId) {
+export function useChat(conversationId, onNewMessage) {
+  const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -11,6 +12,17 @@ export function useChat(conversationId) {
   const [typingUser, setTypingUser] = useState(null);
   const [echoChannel, setEchoChannel] = useState(null);
   const typingTimeoutRef = useRef(null);
+  const lastTypingTimeRef = useRef(0);
+
+  const fetchConversation = useCallback(async () => {
+    if (!conversationId) return;
+    try {
+      const res = await api.get(`/conversations/${conversationId}`);
+      setConversation(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [conversationId]);
 
   const fetchMessages = useCallback(async (pageNumber = 1) => {
     if (!conversationId) return;
@@ -43,6 +55,7 @@ export function useChat(conversationId) {
     }
 
     // Initial fetch
+    fetchConversation();
     fetchMessages(1);
 
     const echo = getEcho() || connectSocket();
@@ -55,9 +68,10 @@ export function useChat(conversationId) {
     channel
       .listen(".MessageSent", (e) => {
         setMessages((prev) => [...prev, e.message]);
+        if (onNewMessage) onNewMessage(e.message, conversationId);
       })
-      .listenForWhisper("typing", (e) => {
-        if (e.typing) {
+      .listen(".UserTyping", (e) => {
+        if (e.is_typing) {
           setIsTyping(true);
           setTypingUser(e.user);
 
@@ -77,15 +91,20 @@ export function useChat(conversationId) {
       echo.leave(`chat.${conversationId}`);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
-  }, [conversationId, fetchMessages]);
+  }, [conversationId, fetchMessages, onNewMessage]);
 
   const sendTypingEvent = (isTypingStatus, user) => {
-    if (echoChannel) {
-      echoChannel.whisper("typing", {
-        typing: isTypingStatus,
-        user: { id: user.id, name: user.name }
-      });
+    if (!conversationId) return;
+
+    const now = Date.now();
+    // Throttle typing API triggers to max once every 2 seconds
+    if (isTypingStatus && now - lastTypingTimeRef.current < 2000) {
+      return;
     }
+
+    lastTypingTimeRef.current = now;
+    api.post(`/conversations/${conversationId}/typing`, { is_typing: isTypingStatus })
+      .catch(err => console.error("Failed to send typing event", err));
   };
 
   const sendMessage = async (text) => {
@@ -99,6 +118,7 @@ export function useChat(conversationId) {
       });
 
       setMessages((prev) => [...prev, response.data]);
+      if (onNewMessage) onNewMessage(response.data, conversationId);
       return response.data;
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -112,5 +132,5 @@ export function useChat(conversationId) {
     }
   };
 
-  return { messages, loading, hasMore, sendMessage, loadMore, isTyping, typingUser, sendTypingEvent };
+  return { conversation, messages, loading, hasMore, sendMessage, loadMore, isTyping, typingUser, sendTypingEvent };
 }

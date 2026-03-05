@@ -6,7 +6,7 @@ import { LogOut, User as UserIcon, Plus } from "lucide-react";
 import NewChatModal from "./NewChatModal";
 import { format, isToday } from "date-fns";
 
-export default function Sidebar({ onSelectConversation, activeConversationId }) {
+export default function Sidebar({ onSelectConversation, activeConversationId, latestMessageUpdate }) {
     const [conversations, setConversations] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const { user, logout } = useAuth();
@@ -17,8 +17,24 @@ export default function Sidebar({ onSelectConversation, activeConversationId }) 
     }, []);
 
     useEffect(() => {
-        fetchConversations();
-    }, []);
+        if (latestMessageUpdate) {
+            setConversations(prev => {
+                // Find and update the conversation, and sort it to top
+                let updated = prev.map(c =>
+                    c.id === latestMessageUpdate.convId
+                        ? { ...c, latest_message: latestMessageUpdate.msg }
+                        : c
+                );
+                // Sort by latest message
+                updated.sort((a, b) => {
+                    const dateA = a.latest_message ? new Date(a.latest_message.created_at) : new Date(a.updated_at);
+                    const dateB = b.latest_message ? new Date(b.latest_message.created_at) : new Date(b.updated_at);
+                    return dateB - dateA;
+                });
+                return updated;
+            });
+        }
+    }, [latestMessageUpdate]);
 
     const fetchConversations = async () => {
         try {

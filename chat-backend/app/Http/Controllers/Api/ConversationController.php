@@ -47,12 +47,12 @@ class ConversationController extends Controller
 
         $conversation = Conversation::query()
             ->where('type', 'private')
-            ->whereHas('users', fn (Builder $query) => $query->where('users.id', $userId))
-            ->whereHas('users', fn (Builder $query) => $query->where('users.id', $participantId))
+            ->whereHas('users', fn(Builder $query) => $query->where('users.id', $userId))
+            ->whereHas('users', fn(Builder $query) => $query->where('users.id', $participantId))
             ->has('users', '=', 2)
             ->first();
 
-        if (! $conversation) {
+        if (!$conversation) {
             $conversation = Conversation::create([
                 'type' => 'private',
             ]);
@@ -67,7 +67,7 @@ class ConversationController extends Controller
 
     public function show(Request $request, Conversation $conversation): JsonResponse
     {
-        if (! $conversation->users()->whereKey($request->user()->id)->exists()) {
+        if (!$conversation->users()->whereKey($request->user()->id)->exists()) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -78,7 +78,7 @@ class ConversationController extends Controller
 
     public function typing(Request $request, Conversation $conversation): JsonResponse
     {
-        if (! $conversation->users()->whereKey($request->user()->id)->exists()) {
+        if (!$conversation->users()->whereKey($request->user()->id)->exists()) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -88,7 +88,7 @@ class ConversationController extends Controller
 
         $isTyping = (bool) ($validated['is_typing'] ?? true);
 
-        broadcast(new UserTyping($conversation->id, $request->user()->id, $isTyping))->toOthers();
+        broadcast(new UserTyping($conversation->id, $request->user(), $isTyping))->toOthers();
 
         return response()->json(['status' => 'ok']);
     }

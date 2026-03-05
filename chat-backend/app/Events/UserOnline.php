@@ -13,7 +13,9 @@ class UserOnline implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public User $user) {}
+    public function __construct(public User $user)
+    {
+    }
 
     public function broadcastOn(): array
     {
@@ -28,5 +30,10 @@ class UserOnline implements ShouldBroadcastNow
             'user_id' => $this->user->id,
             'last_seen' => $this->user->last_seen,
         ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'UserOnline';
     }
 }

@@ -27,19 +27,24 @@ export const connectSocket = () => {
     authorizer: (channel, options) => {
       return {
         authorize: (socketId, callback) => {
-          fetch(`${apiUrl}/api/broadcasting/auth`, {
+          fetch(`${apiUrl}/broadcasting/auth`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "Accept": "application/json",
-              "Authorization": `Bearer ${token}`,
+              "Authorization": `Bearer ${localStorage.getItem("token")}`,
             },
             body: JSON.stringify({
               socket_id: socketId,
               channel_name: channel.name,
             }),
           })
-            .then((response) => response.json())
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Auth failed with status ${response.status}`);
+              }
+              return response.json();
+            })
             .then((data) => callback(false, data))
             .catch((error) => callback(true, error));
         },

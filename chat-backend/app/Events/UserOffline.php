@@ -13,7 +13,9 @@ class UserOffline implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public User $user) {}
+    public function __construct(public User $user)
+    {
+    }
 
     public function broadcastOn(): array
     {
@@ -28,5 +30,10 @@ class UserOffline implements ShouldBroadcastNow
             'user_id' => $this->user->id,
             'last_seen' => optional($this->user->last_seen)->toISOString(),
         ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'UserOffline';
     }
 }
