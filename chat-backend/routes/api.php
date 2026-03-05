@@ -23,6 +23,6 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
     Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing']);
 
-    Route::post('/messages', [MessageController::class, 'send']);
+    Route::post('/messages', [MessageController::class, 'send'])->middleware('throttle:60,1');
     Route::get('/messages/{conversation}', [MessageController::class, 'index']);
 });

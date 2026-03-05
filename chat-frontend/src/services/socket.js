@@ -1,70 +1,59 @@
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
-import { API_BASE_URL } from "./api";
 
 window.Pusher = Pusher;
 
-let echoInstance = null;
+let echo = null;
 
-const APP_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+export const connectSocket = () => {
+  if (echo) return echo;
 
-function resolveSocketConfig() {
-  const scheme = import.meta.env.VITE_PUSHER_SCHEME ?? "http";
-  const host = import.meta.env.VITE_PUSHER_HOST ?? "127.0.0.1";
-  const port = Number(import.meta.env.VITE_PUSHER_PORT ?? 6001);
-  const key = import.meta.env.VITE_PUSHER_APP_KEY ?? "app-key";
+  const token = localStorage.getItem("token");
+  const wsHost = import.meta.env.VITE_PUSHER_HOST || '127.0.0.1';
+  const wsPort = import.meta.env.VITE_PUSHER_PORT || 6001;
+  const appKey = import.meta.env.VITE_PUSHER_APP_KEY || 'app-key';
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-  return { scheme, host, key, port };
-}
-
-function authHeaders(token) {
-  return {
-    Authorization: `Bearer ${token}`,
-    Accept: "application/json",
-  };
-}
-
-export function connectSocket(token) {
-  if (!token) {
-    return null;
-  }
-
-  if (echoInstance) {
-    echoInstance.connector.options.auth = {
-      headers: authHeaders(token),
-    };
-
-    return echoInstance;
-  }
-
-  const { scheme, host, key, port } = resolveSocketConfig();
-
-  echoInstance = new Echo({
+  echo = new Echo({
     broadcaster: "pusher",
-    key,
-    wsHost: host,
-    wsPort: port,
-    wssPort: port,
-    forceTLS: scheme === "https",
-    enabledTransports: ["ws", "wss"],
-    authEndpoint: `${APP_BASE_URL}/broadcasting/auth`,
-    auth: {
-      headers: authHeaders(token),
+    key: appKey,
+    wsHost: wsHost,
+    wsPort: wsPort,
+    forceTLS: false,
+    disableStats: true,
+    cluster: "mt1",
+    authorizer: (channel, options) => {
+      return {
+        authorize: (socketId, callback) => {
+          fetch(`${apiUrl}/api/broadcasting/auth`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              socket_id: socketId,
+              channel_name: channel.name,
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => callback(false, data))
+            .catch((error) => callback(true, error));
+        },
+      };
     },
   });
 
-  return echoInstance;
-}
+  return echo;
+};
 
-export function getSocket() {
-  return echoInstance;
-}
-
-export function disconnectSocket() {
-  if (!echoInstance) {
-    return;
+export const disconnectSocket = () => {
+  if (echo) {
+    echo.disconnect();
+    echo = null;
   }
+};
 
-  echoInstance.disconnect();
-  echoInstance = null;
-}
+export const getEcho = () => echo;
+
+export default echo;

@@ -15,10 +15,9 @@ class MessageController extends Controller
     public function send(SendMessageRequest $request): JsonResponse
     {
         $validated = $request->validated();
-
         $conversation = Conversation::query()->findOrFail($validated['conversation_id']);
 
-        if (! $conversation->users()->whereKey($request->user()->id)->exists()) {
+        if (!$conversation->users()->whereKey($request->user()->id)->exists()) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -39,7 +38,7 @@ class MessageController extends Controller
 
     public function index(Request $request, Conversation $conversation): JsonResponse
     {
-        if (! $conversation->users()->whereKey($request->user()->id)->exists()) {
+        if (!$conversation->users()->whereKey($request->user()->id)->exists()) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -47,7 +46,7 @@ class MessageController extends Controller
 
         $messages = $conversation->messages()
             ->with('sender:id,name,email,avatar')
-            ->latest('id')
+            ->orderByDesc('id')
             ->paginate($perPage);
 
         return response()->json($messages);
