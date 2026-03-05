@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\UserTyping;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conversation\StoreConversationRequest;
 use App\Models\Conversation;
@@ -73,5 +74,22 @@ class ConversationController extends Controller
         $conversation->load('users:id,name,email,avatar,last_seen');
 
         return response()->json($conversation);
+    }
+
+    public function typing(Request $request, Conversation $conversation): JsonResponse
+    {
+        if (! $conversation->users()->whereKey($request->user()->id)->exists()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'is_typing' => ['sometimes', 'boolean'],
+        ]);
+
+        $isTyping = (bool) ($validated['is_typing'] ?? true);
+
+        broadcast(new UserTyping($conversation->id, $request->user()->id, $isTyping))->toOthers();
+
+        return response()->json(['status' => 'ok']);
     }
 }

@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\MessageSent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Message\SendMessageRequest;
 use App\Models\Conversation;
 use App\Models\Message;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class MessageController extends Controller
 {
@@ -30,6 +31,8 @@ class MessageController extends Controller
         ]);
 
         $message->load('sender:id,name,email,avatar');
+
+        broadcast(new MessageSent($message))->toOthers();
 
         return response()->json($message, 201);
     }

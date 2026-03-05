@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\UserOffline;
+use App\Events\UserOnline;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
@@ -42,7 +44,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
+        $user->forceFill([
+            'last_seen' => now(),
+        ])->save();
+
         $token = $user->createToken('chat_token')->plainTextToken;
+        broadcast(new UserOnline($user))->toOthers();
 
         return response()->json([
             'user' => $user,
@@ -54,11 +61,17 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        $user->forceFill([
+            'last_seen' => now(),
+        ])->save();
+
         if ($user->currentAccessToken()) {
             $user->currentAccessToken()->delete();
         } else {
             $user->tokens()->delete();
         }
+
+        broadcast(new UserOffline($user))->toOthers();
 
         return response()->json(['message' => 'Logged out']);
     }

@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Api;
 
+use App\Events\MessageSent;
+use App\Events\UserTyping;
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -44,6 +47,7 @@ class ChatApiTest extends TestCase
     {
         $sender = User::factory()->create();
         $receiver = User::factory()->create();
+        Event::fake([MessageSent::class, UserTyping::class]);
 
         Sanctum::actingAs($sender);
 
@@ -67,12 +71,24 @@ class ChatApiTest extends TestCase
             ->assertJsonPath('conversation_id', $conversationId)
             ->assertJsonPath('message', 'Hello from tests');
 
+        Event::assertDispatched(MessageSent::class);
+
         $messagesResponse = $this->getJson('/api/messages/'.$conversationId);
 
         $messagesResponse
             ->assertOk()
             ->assertJsonPath('data.0.message', 'Hello from tests')
             ->assertJsonPath('data.0.sender_id', $sender->id);
+
+        $typingResponse = $this->postJson('/api/conversations/'.$conversationId.'/typing', [
+            'is_typing' => true,
+        ]);
+
+        $typingResponse
+            ->assertOk()
+            ->assertJsonPath('status', 'ok');
+
+        Event::assertDispatched(UserTyping::class);
     }
 
     public function test_messages_endpoint_requires_authentication(): void
