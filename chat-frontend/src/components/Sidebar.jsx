@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import api from "../services/api";
 import { useAuth } from "../hooks/useAuth";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, User as UserIcon, Plus } from "lucide-react";
 
 export default function Sidebar({ onSelectConversation, activeConversationId }) {
     const [conversations, setConversations] = useState([]);
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState("");
+    const [isSearching, setIsSearching] = useState(false);
     const { user, logout } = useAuth();
 
     useEffect(() => {
@@ -47,6 +48,7 @@ export default function Sidebar({ onSelectConversation, activeConversationId }) 
             onSelectConversation(res.data.id);
             setSearch("");
             setUsers([]);
+            setIsSearching(false);
         } catch (err) {
             console.error(err);
         }
@@ -66,15 +68,35 @@ export default function Sidebar({ onSelectConversation, activeConversationId }) 
                 </button>
             </div>
 
-            <div className="p-4 border-b">
-                <input
-                    type="text"
-                    placeholder="Search users to chat..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full rounded-md border bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                />
+            <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-100">
+                <span className="text-sm font-semibold text-gray-600">Messages</span>
+                <button
+                    onClick={() => {
+                        setIsSearching(!isSearching);
+                        if (isSearching) {
+                            setSearch("");
+                            setUsers([]);
+                        }
+                    }}
+                    className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition"
+                    title="New Chat"
+                >
+                    <Plus size={18} />
+                </button>
             </div>
+
+            {isSearching && (
+                <div className="p-4 border-b bg-white">
+                    <input
+                        type="text"
+                        placeholder="Search users by name or email..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none transition"
+                        autoFocus
+                    />
+                </div>
+            )}
 
             <div className="flex-1 overflow-y-auto">
                 {search.trim() && users.length > 0 ? (
@@ -87,7 +109,10 @@ export default function Sidebar({ onSelectConversation, activeConversationId }) 
                                 className="flex cursor-pointer items-center p-3 hover:bg-gray-100 border-b"
                             >
                                 <UserIcon className="mr-3 h-10 w-10 rounded-full bg-gray-200 p-2 text-gray-500" />
-                                <span className="font-medium text-gray-800">{u.name}</span>
+                                <div className="flex flex-col">
+                                    <span className="font-medium text-gray-800">{u.name}</span>
+                                    <span className="text-sm text-gray-500">{u.email}</span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -117,8 +142,11 @@ export default function Sidebar({ onSelectConversation, activeConversationId }) 
                                         )}
                                     </div>
                                     <div className="flex-1 overflow-hidden">
-                                        <div className="flex justify-between items-center mb-1">
+                                        <div className="flex flex-col mb-1">
                                             <h4 className="font-semibold text-gray-800 truncate">{conv.is_group ? conv.name : otherUser?.name}</h4>
+                                            {!conv.is_group && otherUser?.email && (
+                                                <span className="text-xs text-gray-500 truncate">{otherUser.email}</span>
+                                            )}
                                         </div>
                                         {conv.last_message && (
                                             <p className="truncate text-sm text-gray-500">

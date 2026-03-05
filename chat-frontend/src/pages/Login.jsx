@@ -13,7 +13,7 @@ export default function Login() {
         e.preventDefault();
         setError(null);
         try {
-            await login(email, password);
+            await login({ email, password });
             navigate("/chat");
         } catch (err) {
             setError("Invalid credentials. Please try again.");

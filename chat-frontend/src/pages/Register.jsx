@@ -20,7 +20,12 @@ export default function Register() {
             return;
         }
         try {
-            await register(name, email, password, passwordConfirm);
+            await register({
+                name,
+                email,
+                password,
+                password_confirmation: passwordConfirm
+            });
             navigate("/chat");
         } catch (err) {
             setError("Registration failed. Please check your inputs.");

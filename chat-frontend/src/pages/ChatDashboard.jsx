@@ -5,10 +5,10 @@ import Sidebar from "../components/Sidebar";
 import ChatWindow from "../components/ChatWindow";
 
 export default function ChatDashboard() {
-    const { user, loading } = useAuth();
+    const { user, authLoading } = useAuth();
     const [activeConversationId, setActiveConversationId] = useState(null);
 
-    if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    if (authLoading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
     if (!user) return <Navigate to="/login" />;
 
     return (
