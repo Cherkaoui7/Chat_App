@@ -1,0 +1,64 @@
+Table users {
+  id bigint [pk, increment]
+  name varchar(120) [not null]
+  email varchar(255) [not null, unique]
+  password varchar(255) [not null]
+  avatar varchar(500)
+  last_seen timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table conversations {
+  id bigint [pk, increment]
+  type enum_private_group [not null, default: 'private']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table conversation_user {
+  id bigint [pk, increment]
+  conversation_id bigint [not null]
+  user_id bigint [not null]
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (conversation_id, user_id) [unique]
+    user_id
+  }
+}
+
+Table messages {
+  id bigint [pk, increment]
+  conversation_id bigint [not null]
+  sender_id bigint [not null]
+  message text [not null]
+  type enum_text_image_file [not null, default: 'text']
+  seen boolean [not null, default: false]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (conversation_id, created_at, id)
+    sender_id
+    type
+    seen
+  }
+}
+
+Ref: conversation_user.conversation_id > conversations.id [delete: cascade]
+Ref: conversation_user.user_id > users.id [delete: cascade]
+Ref: messages.conversation_id > conversations.id [delete: cascade]
+Ref: messages.sender_id > users.id
+
+Enum enum_private_group {
+  private
+  group
+}
+
+Enum enum_text_image_file {
+  text
+  image
+  file
+}
