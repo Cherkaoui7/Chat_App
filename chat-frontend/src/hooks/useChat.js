@@ -13,6 +13,7 @@ export function useChat(conversationId, onNewMessage) {
   const [echoChannel, setEchoChannel] = useState(null);
   const typingTimeoutRef = useRef(null);
   const lastTypingTimeRef = useRef(0);
+  const isTypingRef = useRef(false);
 
   const fetchConversation = useCallback(async () => {
     if (!conversationId) return;
@@ -67,7 +68,10 @@ export function useChat(conversationId, onNewMessage) {
 
     channel
       .listen(".MessageSent", (e) => {
-        setMessages((prev) => [...prev, e.message]);
+        setMessages((prev) => {
+          if (prev.some(m => m.id === e.message.id)) return prev;
+          return [...prev, e.message];
+        });
         if (onNewMessage) onNewMessage(e.message, conversationId);
       })
       .listen(".UserTyping", (e) => {
@@ -75,21 +79,27 @@ export function useChat(conversationId, onNewMessage) {
           setIsTyping(true);
           setTypingUser(e.user);
 
-          // Clear the typing indicator after 3 seconds of no new typing events
+          // Auto-clear typing indicator after 3 seconds if no new typing event
           if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
           typingTimeoutRef.current = setTimeout(() => {
             setIsTyping(false);
             setTypingUser(null);
           }, 3000);
-        } else {
-          setIsTyping(false);
-          setTypingUser(null);
         }
+      })
+      .listen(".UserStoppedTyping", (e) => {
+        setIsTyping(false);
+        setTypingUser(null);
+      })
+      .listen(".MessageDeleted", (e) => {
+        setMessages((prev) => prev.filter(m => m.id !== e.message_id));
       });
 
     return () => {
-      echo.leave(`chat.${conversationId}`);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (echoChannel) {
+        echo.leave(`chat.${conversationId}`);
+      }
     };
   }, [conversationId, fetchMessages, onNewMessage]);
 
@@ -97,18 +107,45 @@ export function useChat(conversationId, onNewMessage) {
     if (!conversationId) return;
 
     const now = Date.now();
-    // Throttle typing API triggers to max once every 2 seconds
-    if (isTypingStatus && now - lastTypingTimeRef.current < 2000) {
-      return;
-    }
 
-    lastTypingTimeRef.current = now;
-    api.post(`/conversations/${conversationId}/typing`, { is_typing: isTypingStatus })
-      .catch(err => console.error("Failed to send typing event", err));
+    // If user is typing
+    if (isTypingStatus) {
+      // Throttle API calls - max once every 2 seconds
+      if (now - lastTypingTimeRef.current < 2000) {
+        return;
+      }
+
+      lastTypingTimeRef.current = now;
+      isTypingRef.current = true;
+
+      // Send typing event
+      api.post(`/conversations/${conversationId}/typing`, { is_typing: true })
+        .catch(err => console.error("Failed to send typing event", err));
+
+      // Clear any existing stop timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Send stop typing event after 1.5 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        if (isTypingRef.current) {
+          isTypingRef.current = false;
+          api.post(`/conversations/${conversationId}/stop-typing`)
+            .catch(err => console.error("Failed to send stop typing event", err));
+        }
+      }, 1500);
+    }
   };
 
   const sendMessage = async (text) => {
     if (!text.trim() || !conversationId) return null;
+
+    // Clear typing state when sending message
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    isTypingRef.current = false;
 
     try {
       // Optimistic update could go here, but for simplicity we rely on API response
@@ -117,11 +154,57 @@ export function useChat(conversationId, onNewMessage) {
         message: text,
       });
 
-      setMessages((prev) => [...prev, response.data]);
+      setMessages((prev) => {
+        if (prev.some(m => m.id === response.data.id)) return prev;
+        return [...prev, response.data];
+      });
       if (onNewMessage) onNewMessage(response.data, conversationId);
       return response.data;
     } catch (error) {
       console.error("Failed to send message:", error);
+      throw error;
+    }
+  };
+
+  const deleteMessage = async (messageId) => {
+    if (!messageId || !conversationId) return;
+
+    // Optimistic deletion
+    setMessages((prev) => prev.filter(m => m.id !== messageId));
+
+    try {
+      await api.delete(`/messages/${messageId}`);
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+    }
+  };
+
+  const sendFile = async (file, onProgress) => {
+    if (!file || !conversationId) return null;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('conversation_id', conversationId);
+
+    try {
+      const response = await api.post("/messages/upload", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          if (onProgress) onProgress(percentCompleted);
+        },
+      });
+
+      setMessages((prev) => {
+        if (prev.some(m => m.id === response.data.message.id)) return prev;
+        return [...prev, response.data.message];
+      });
+      if (onNewMessage) onNewMessage(response.data.message, conversationId);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to upload file:", error);
       throw error;
     }
   };
@@ -132,5 +215,5 @@ export function useChat(conversationId, onNewMessage) {
     }
   };
 
-  return { conversation, messages, loading, hasMore, sendMessage, loadMore, isTyping, typingUser, sendTypingEvent };
+  return { conversation, messages, loading, hasMore, sendMessage, sendFile, loadMore, isTyping, typingUser, sendTypingEvent, deleteMessage };
 }

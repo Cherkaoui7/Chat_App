@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 
-export default function MessageList({ messages, user, isTyping, typingUser, loading, hasMore, loadMore }) {
+export default function MessageList({ messages, user, isTyping, typingUser, loading, hasMore, loadMore, onReply, onDelete, onEdit }) {
     const endOfMessagesRef = useRef(null);
     const scrollContainerRef = useRef(null);
 
@@ -38,10 +38,13 @@ export default function MessageList({ messages, user, isTyping, typingUser, load
 
                 return (
                     <MessageBubble
-                        key={msg.id || index}
+                        key={`${msg.id}-${index}`}
                         message={msg}
                         isOwnMessage={isOwnMessage}
                         showSenderName={showSenderName}
+                        onReply={onReply}
+                        onDelete={onDelete}
+                        onEdit={onEdit}
                     />
                 );
             })}

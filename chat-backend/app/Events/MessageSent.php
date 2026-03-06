@@ -36,6 +36,10 @@ class MessageSent implements ShouldBroadcastNow
                 'message' => $this->message->message,
                 'type' => $this->message->type,
                 'seen' => (bool) $this->message->seen,
+                'file_path' => $this->message->file_path,
+                'file_name' => $this->message->file_name,
+                'file_mime_type' => $this->message->file_mime_type,
+                'file_size' => $this->message->file_size,
                 'created_at' => optional($this->message->created_at)->toISOString(),
                 'sender' => $this->message->sender ? [
                     'id' => $this->message->sender->id,

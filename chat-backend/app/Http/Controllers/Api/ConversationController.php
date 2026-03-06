@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\UserStoppedTyping;
 use App\Events\UserTyping;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conversation\StoreConversationRequest;
@@ -88,7 +89,22 @@ class ConversationController extends Controller
 
         $isTyping = (bool) ($validated['is_typing'] ?? true);
 
-        broadcast(new UserTyping($conversation->id, $request->user(), $isTyping))->toOthers();
+        if ($isTyping) {
+            broadcast(new UserTyping($conversation->id, $request->user(), true))->toOthers();
+        } else {
+            broadcast(new UserStoppedTyping($conversation->id, $request->user()))->toOthers();
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    public function stopTyping(Request $request, Conversation $conversation): JsonResponse
+    {
+        if (!$conversation->users()->whereKey($request->user()->id)->exists()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        broadcast(new UserStoppedTyping($conversation->id, $request->user()))->toOthers();
 
         return response()->json(['status' => 'ok']);
     }

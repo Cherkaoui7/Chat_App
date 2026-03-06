@@ -1,6 +1,9 @@
-import { Phone, Video, MoreVertical } from "lucide-react";
+import { Phone, Video, MoreVertical, X } from "lucide-react";
+import { useState } from "react";
 
-export default function ChatHeader({ user, online }) {
+export default function ChatHeader({ user, online, onInitiateCall }) {
+    const [showMenu, setShowMenu] = useState(false);
+
     if (!user) return null;
 
     return (
@@ -23,10 +26,54 @@ export default function ChatHeader({ user, online }) {
                     <span className="text-[13px] text-gray-500">{online ? "● Online" : "Offline"}</span>
                 </div>
             </div>
-            <div className="flex items-center space-x-4 text-gray-400">
-                <button className="hover:text-indigo-600 transition-colors"><Phone size={20} /></button>
-                <button className="hover:text-indigo-600 transition-colors"><Video size={20} /></button>
-                <button className="hover:text-indigo-600 transition-colors"><MoreVertical size={20} /></button>
+            <div className="flex items-center space-x-4 text-gray-400 relative">
+                <button 
+                    onClick={() => onInitiateCall?.('audio')}
+                    className="hover:text-indigo-600 transition-colors"
+                    title="Audio Call"
+                >
+                    <Phone size={20} />
+                </button>
+                <button 
+                    onClick={() => onInitiateCall?.('video')}
+                    className="hover:text-indigo-600 transition-colors"
+                    title="Video Call"
+                >
+                    <Video size={20} />
+                </button>
+                <div className="relative">
+                    <button 
+                        onClick={() => setShowMenu(!showMenu)}
+                        className="hover:text-indigo-600 transition-colors"
+                        title="More Options"
+                    >
+                        <MoreVertical size={20} />
+                    </button>
+                    
+                    {showMenu && (
+                        <>
+                            <div 
+                                className="fixed inset-0 z-10" 
+                                onClick={() => setShowMenu(false)}
+                            />
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20 py-1">
+                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <Phone size={16} /> Audio Call
+                                </button>
+                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <Video size={16} /> Video Call
+                                </button>
+                                <hr className="my-1" />
+                                <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <X size={16} /> Block User
+                                </button>
+                                <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <X size={16} /> Report User
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

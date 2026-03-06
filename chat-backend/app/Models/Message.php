@@ -16,6 +16,10 @@ class Message extends Model
         'message',
         'type',
         'seen',
+        'file_path',
+        'file_name',
+        'file_mime_type',
+        'file_size',
     ];
 
     protected function casts(): array

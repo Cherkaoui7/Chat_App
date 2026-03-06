@@ -18,3 +18,7 @@ Broadcast::channel('online', function (User $user): array {
         'avatar' => $user->avatar,
     ];
 });
+
+Broadcast::channel('call.{userId}', function (User $user, int $userId): bool {
+    return $user->id === $userId;
+});
