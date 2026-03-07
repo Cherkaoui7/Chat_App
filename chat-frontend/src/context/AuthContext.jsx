@@ -27,9 +27,27 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(
     async (credentials) => {
-      const response = await api.post("/login", credentials);
-      saveAuthState(response.data.token, response.data.user);
-      return response.data.user;
+      try {
+        const response = await api.post("/login", credentials);
+        saveAuthState(response.data.token, response.data.user);
+        return response.data.user;
+      } catch (error) {
+        console.error("Login error:", error);
+        if (error.response) {
+          // Server responded with error
+          console.error("Response status:", error.response.status);
+          console.error("Response data:", error.response.data);
+          const message = error.response.data?.message || error.response.data?.error || "Login failed";
+          throw new Error(message);
+        } else if (error.request) {
+          // Request made but no response
+          console.error("No response received:", error.request);
+          throw new Error("Cannot connect to server. Please ensure the backend is running on http://127.0.0.1:8000");
+        } else {
+          // Other error
+          throw new Error(error.message || "Login failed. Please check your credentials.");
+        }
+      }
     },
     [saveAuthState],
   );

@@ -16,7 +16,8 @@ export default function Login() {
             await login({ email, password });
             navigate("/chat");
         } catch (err) {
-            setError("Invalid credentials. Please try again.");
+            console.error("Login failed:", err);
+            setError(err.message);
         }
     };
 

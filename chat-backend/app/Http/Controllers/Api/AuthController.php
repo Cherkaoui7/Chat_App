@@ -49,7 +49,13 @@ class AuthController extends Controller
         ])->save();
 
         $token = $user->createToken('chat_token')->plainTextToken;
-        broadcast(new UserOnline($user))->toOthers();
+        
+        // Broadcast online status (non-blocking, won't fail login if Reverb is down)
+        try {
+            broadcast(new UserOnline($user))->toOthers();
+        } catch (\Exception $e) {
+            \Log::warning('Failed to broadcast UserOnline event: ' . $e->getMessage());
+        }
 
         return response()->json([
             'user' => $user,
@@ -71,7 +77,12 @@ class AuthController extends Controller
             $user->tokens()->delete();
         }
 
-        broadcast(new UserOffline($user))->toOthers();
+        // Broadcast offline status (non-blocking, won't fail logout if Reverb is down)
+        try {
+            broadcast(new UserOffline($user))->toOthers();
+        } catch (\Exception $e) {
+            \Log::warning('Failed to broadcast UserOffline event: ' . $e->getMessage());
+        }
 
         return response()->json(['message' => 'Logged out']);
     }
