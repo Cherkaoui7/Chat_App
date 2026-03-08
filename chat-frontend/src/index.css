@@ -71,6 +71,24 @@
   animation: slideIn 0.2s ease-out forwards;
 }
 
+/* Call modal gradient animation */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
 /* Custom range input styling for audio player */
 input[type="range"] {
   -webkit-appearance: none;

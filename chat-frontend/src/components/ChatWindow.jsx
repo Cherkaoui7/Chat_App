@@ -21,6 +21,8 @@ export default function ChatWindow({ conversationId, onNewMessage }) {
         isMuted,
         isVideoOff,
         callStatus,
+        callDuration,
+        error,
         startCall,
         acceptCall,
         rejectCall,
@@ -115,7 +117,10 @@ export default function ChatWindow({ conversationId, onNewMessage }) {
                 <ChatHeader
                     user={conversation.is_group ? { name: conversation.name, avatar: null } : otherUser}
                     online={conversation.is_group ? false : online}
+                    isInCall={isInCall}
+                    callDuration={callDuration}
                     onInitiateCall={handleInitiateCall}
+                    onEndCall={handleEndCall}
                 />
             ) : (
                 <div className="h-16 shrink-0 border-b border-gray-200 bg-white shadow-sm flex items-center px-6">
@@ -155,9 +160,9 @@ export default function ChatWindow({ conversationId, onNewMessage }) {
                     onReject={handleRejectCall}
                     onEnd={handleEndCall}
                     isMuted={isMuted}
-                    isVideoOff={isVideoOff}
                     onToggleMute={toggleMute}
-                    onToggleVideo={toggleVideo}
+                    callDuration={callDuration}
+                    error={error}
                 />
             )}
         </div>
